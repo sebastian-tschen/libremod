@@ -1,26 +1,23 @@
 #include <Arduino.h>
-#include <WiFi.h>
-#include <PubSubClient.h>
+#include <ESP8266WiFi.h>
 
 #include "display.hpp"
-#include "scale.hpp"
+#include "controller.hpp"
 
 WiFiClient espClient;
-PubSubClient client(espClient);
-
-const char* ssid     = "ThisIsNotTheWifiYoureLookingFor"; // Change this to your WiFi SSID
-const char* password = "244466666"; // Change this to your WiFi password
-long lastReconnectAttempt = 0;
 
 void setup() {
+  pinMode(GRINDER_ACTIVE_PIN, OUTPUT);
+  pinMode(GRINDER_SENSE_PIN, INPUT);
+  digitalWrite(GRINDER_ACTIVE_PIN, GRINDER_OFF);
+  pinMode(GRINDER_MODE_BUTTON_PIN, INPUT);
+
   Serial.begin(115200);
   while(!Serial){delay(100);}
 
-  setupDisplay();
-  setupScale();
 
-  Serial.println();
-  Serial.println("******************************************************");
+  // Serial.println();
+  // Serial.println("******************************************************");
   // Serial.print("Connecting to ");
   // Serial.println(ssid);
 
@@ -35,30 +32,19 @@ void setup() {
   // Serial.println("WiFi connected");
   // Serial.println("IP address: ");
   // Serial.println(WiFi.localIP());
-  // lastReconnectAttempt = 0;
-  // client.setServer("192.168.1.201", 1883);
+
+  setupDisplay();
+  setupScale();
+
 }
 
-boolean reconnect() {
-  if (client.connect("coffee-scale")) {
-    // Once connected, publish an announcement...
-    Serial.println("Connected to MQTT");
-  }
-  return client.connected();
-}
 
 void loop() {
-  // if (!client.connected()) {
-  //   long now = millis();
-  //   if (now - lastReconnectAttempt > 5000) {
-  //     lastReconnectAttempt = now;
-  //     // Attempt to reconnect
-  //     if (reconnect()) {
-  //       lastReconnectAttempt = 0;
-  //     }
-  //   }
-  // } else {
-  //   client.loop();
-  // }
-  delay(1000);
+
+  // drawadc();
+  // detectTimeGrind();
+
+  updateScale();
+  updateDisplay(NULL);
+  scaleStatusLoop();
 }

@@ -17,6 +17,7 @@ public:
 	T averageSince(int64_t cutoffMs);
 	T maxSince(int64_t cutoffMs);
 	T minSince(int64_t cutoffMs);
+	T slopeSince(int64_t cutoffMs);
 	T firstValueOlderThan(int64_t cutoffMs);
 
 private:
