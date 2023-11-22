@@ -19,6 +19,8 @@ public:
 	T minSince(int64_t cutoffMs);
 	T slopeSince(int64_t cutoffMs);
 	T firstValueOlderThan(int64_t cutoffMs);
+	T getHeadValue();
+	int64_t getHeadTimestamp();
 
 private:
 	T buffer[S];

@@ -24,7 +24,7 @@ bool MathBuffer<T, S>::push(T value) {
 
 template<typename T,size_t S>
 void MathBuffer<T, S>::executeOnSamplesSince(int64_t cutoffMs, std::function<void (T, int64_t)> iterator) {
-  for (int i = 0; i < count; i++) {
+  for (size_t i = 0; i < count; i++) {
     int index = (headIndex - i); // going backward to go from newest to oldest
     if (index < 0) { // wrap around
       index += S;
@@ -38,7 +38,7 @@ void MathBuffer<T, S>::executeOnSamplesSince(int64_t cutoffMs, std::function<voi
 
 template<typename T,size_t S>
 size_t MathBuffer<T, S>::countSamplesSince(int64_t cutoffMs) {
-  for (int i = 0; i < count; i++) {
+  for (size_t i = 0; i < count; i++) {
     int index = (headIndex - i); // going backward to go from newest to oldest
     if (index < 0) { // wrap around
       index += S;
@@ -96,7 +96,7 @@ T MathBuffer<T, S>::minSince(int64_t cutoffMs) {
 
 template<typename T,size_t S>
 T MathBuffer<T, S>::firstValueOlderThan(int64_t cutoffMs) {
-  for (int i = 0; i < count; i++) {
+  for (size_t i = 0; i < count; i++) {
     int index = (headIndex - i); // going backward to go from newest to oldest
     if (index < 0) { // wrap around
       index += S;
@@ -106,5 +106,15 @@ T MathBuffer<T, S>::firstValueOlderThan(int64_t cutoffMs) {
     }
   }
   return 0;
+}
+
+template<typename T,size_t S>
+T MathBuffer<T, S>::getHeadValue() {
+  return buffer[headIndex];
+}
+
+template<typename T,size_t S>
+int64_t MathBuffer<T, S>::getHeadTimestamp() {
+  return bufferTimestamp[headIndex];
 }
 
