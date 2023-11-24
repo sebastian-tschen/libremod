@@ -1,4 +1,5 @@
 #include "display.hpp"
+#include "octopus.hpp"
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
@@ -167,7 +168,7 @@ void setupDisplay()
   u8g2.begin();
   u8g2.clearBuffer(); // clear the internal memory
   u8g2.setFont(u8g2_font_unifont_t_symbols);
-  u8g2.drawUTF8X2(50, 40, "☕️");
+  u8g2.drawXBM(0,0,coffeeOctopus_width,coffeeOctopus_height,coffeeOctopus_bits);
   u8g2.sendBuffer();
   Serial.println("init_display done");
 }
