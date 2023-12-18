@@ -69,3 +69,4 @@ In the end, this is the new electronics-parts I added to the machine
 ![schema additional electronics](assets/mignon_additional.png)
 
 *Schema of additional electronics added for this project*
+

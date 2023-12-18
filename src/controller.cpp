@@ -20,12 +20,15 @@ int grindingInProgress = 0;
 double cupWeightEmpty = 0;
 double totalTimerTime = 0;
 unsigned long startedGrindingAt = 0;
+unsigned long cupDetectedAt = 0;
 unsigned long finishedGrindingAt = 0;
+unsigned long stableSince = 0;
 MathBuffer<double, 100> weightHistory;
 int potiValue = 0;
 int lastStablePotiValue = 0;
 float coffeeDoseWeight = 14.0;
 unsigned long grindmillis = 0;
+int errorCode = 0;
 
 void tareScale()
 {
@@ -58,14 +61,14 @@ void updateScale()
 
 void startGrinding()
 {
-  pinMode(GRINDER_ACTIVE_PIN, OUTPUT);
-  digitalWrite(GRINDER_ACTIVE_PIN, GRINDER_ON);
+  pinMode(GRINDER_START_PIN, OUTPUT);
+  digitalWrite(GRINDER_START_PIN, GRINDER_ON);
 }
 
 void stopGrinding()
 {
   // avoid draining too much current into pin by making it open/tri-state (high resistance?)
-  pinMode(GRINDER_ACTIVE_PIN, INPUT);
+  pinMode(GRINDER_START_PIN, INPUT);
 }
 
 void updateGrinderMode()
@@ -103,10 +106,10 @@ unsigned long extrapolateEndMillis()
 
 int isCupDetected(void){
 
-  return (ABS(weightHistory.minSince((int64_t)millis() - 1000) - CUP_WEIGHT) < CUP_DETECTION_TOLERANCE &&
-        ABS(weightHistory.maxSince((int64_t)millis() - 1000) - CUP_WEIGHT) < CUP_DETECTION_TOLERANCE) ||
-        (ABS(weightHistory.minSince((int64_t)millis() - 1000) - CUP_WEIGHT2) < CUP_DETECTION_TOLERANCE &&
-        ABS(weightHistory.maxSince((int64_t)millis() - 1000) - CUP_WEIGHT2) < CUP_DETECTION_TOLERANCE);
+  return (ABS(weightHistory.minSince((int64_t)millis() - 200) - CUP_WEIGHT) < CUP_DETECTION_TOLERANCE &&
+        ABS(weightHistory.maxSince((int64_t)millis() - 200) - CUP_WEIGHT) < CUP_DETECTION_TOLERANCE) ||
+        (ABS(weightHistory.minSince((int64_t)millis() - 200) - CUP_WEIGHT2) < CUP_DETECTION_TOLERANCE &&
+        ABS(weightHistory.maxSince((int64_t)millis() - 200) - CUP_WEIGHT2) < CUP_DETECTION_TOLERANCE);
 }
 
 void scaleStatusLoop()
@@ -174,43 +177,21 @@ void scaleStatusLoop()
     // see if we can detect a cup
     if (isCupDetected())
     {
-      if (currentGrinderMode == GRINDER_MODE_TIMER)
-      {
-        cupWeightEmpty = weightHistory.averageSince((int64_t)millis() - 500);
-        scaleStatus = STATUS_TIMER_GRINDING_IN_PROGRESS;
-        Serial.println("turning button on");
-        startGrinding();
-        Serial.println("turned button on");
-        while (digitalRead(GRINDER_SENSE_PIN) == 0)
-        {
-          Serial.println(".");
-          delay(10);
-        }
-        Serial.println("\n");
-        startedGrindingAt = millis();
-        stopGrinding();
-        Serial.println("turned button off");
-        return;
-      }
-      else
-      {
-        // using average over last 500ms as empty cup weight
-        Serial.println("Starting grinding");
-        cupWeightEmpty = weightHistory.averageSince((int64_t)millis() - 500);
-        scaleStatus = STATUS_SCALE_GRINDING_IN_PROGRESS;
-        startedGrindingAt = millis();
-        startGrinding();
-        return;
-      }
+      scaleStatus=STATUS_SCALE_CUP_DETECTED;
+      cupDetectedAt = millis();
+      Serial.println("cup detected");
+      return;
     }
   }
   else if (scaleStatus == STATUS_SCALE_GRINDING_IN_PROGRESS)
   {
     if (!scaleReady)
     {
-      Serial.println("Failed because sclae not ready");
+      Serial.println("Failed because scale not ready");
       stopGrinding();
       scaleStatus = STATUS_GRINDING_FAILED;
+      errorCode = SCALE_NOT_READY;
+      return;
     }
 
     if (millis() - startedGrindingAt > MAX_GRINDING_TIME)
@@ -218,6 +199,7 @@ void scaleStatusLoop()
       Serial.println("Failed because grinding took too long");
       stopGrinding();
       scaleStatus = STATUS_GRINDING_FAILED;
+      errorCode = GRINDING_TOOK_TOO_LONG;
       return;
     }
 
@@ -229,6 +211,7 @@ void scaleStatusLoop()
       Serial.println("Failed because no change in weight was detected");
       stopGrinding();
       scaleStatus = STATUS_GRINDING_FAILED;
+      errorCode = NO_WEIGHT_CHANGE;
       return;
     }
 
@@ -237,6 +220,7 @@ void scaleStatusLoop()
       Serial.printf("Failed because weight too low, min: %f, min value: %f\n", weightHistory.minSince((int64_t)millis() - 200), CUP_WEIGHT + CUP_DETECTION_TOLERANCE);
       stopGrinding();
       scaleStatus = STATUS_GRINDING_FAILED;
+      errorCode = WEIGHT_TOO_LOW;
       return;
     }
     double remailingMillis = extrapolateEndMillis();
@@ -259,6 +243,47 @@ void scaleStatusLoop()
       Serial.println("Finished grinding");
       return;
     }
+  }
+  else if (scaleStatus == STATUS_SCALE_CUP_DETECTED){
+      if(!isCupDetected()){
+        scaleStatus = STATUS_EMPTY;
+        Serial.println("cup removed");
+        return;
+      }
+      double refWeight = weightHistory.averageSince((int64_t)millis() - 500);
+      stableSince=weightHistory.withinRangeSince(refWeight-0.06,refWeight+0.06);
+      Serial.printf("stableSince %i", millis()-stableSince);
+
+      if (stableSince>0 && millis()-stableSince > 1000){ // are we stable since at least 2 seconds?
+        if (currentGrinderMode == GRINDER_MODE_TIMER)
+        {
+          cupWeightEmpty = weightHistory.averageSince((int64_t)millis() - 500);
+          scaleStatus = STATUS_TIMER_GRINDING_IN_PROGRESS;
+          Serial.println("turning button on");
+          startGrinding();
+          Serial.println("turned button on");
+          while (digitalRead(GRINDER_SENSE_PIN) == 0)
+          {
+            Serial.println(".");
+            delay(10);
+          }
+          Serial.println("\n");
+          startedGrindingAt = millis();
+          stopGrinding();
+          Serial.println("turned button off");
+          return;
+        }
+        else
+        {
+          // using average over last 500ms as empty cup weight
+          Serial.println("Starting grinding");
+          cupWeightEmpty = weightHistory.averageSince((int64_t)millis() - 500);
+          scaleStatus = STATUS_SCALE_GRINDING_IN_PROGRESS;
+          startedGrindingAt = millis();
+          startGrinding();
+          return;
+        }
+      }
   }
   else if (scaleStatus == STATUS_TIMER_GRINDING_IN_PROGRESS)
   {

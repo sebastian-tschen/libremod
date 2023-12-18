@@ -52,6 +52,8 @@ size_t MathBuffer<T, S>::countSamplesSince(int64_t cutoffMs) {
 }
 
 
+
+
 template<typename T,size_t S>
 T MathBuffer<T, S>::averageSince(int64_t cutoffMs) {
   size_t sampleCount = countSamplesSince(cutoffMs);
@@ -116,5 +118,29 @@ T MathBuffer<T, S>::getHeadValue() {
 template<typename T,size_t S>
 int64_t MathBuffer<T, S>::getHeadTimestamp() {
   return bufferTimestamp[headIndex];
+}
+
+template<typename T,size_t S>
+int64_t MathBuffer<T, S>::withinRangeSince(T lowCutoffValue, T highCutoffValue) {
+  return max(lastTimeBelow(lowCutoffValue),lastTimeAbove(highCutoffValue));
+}
+
+template<typename T,size_t S>
+int64_t MathBuffer<T, S>::lastTimeBelow(T lowCutoffValue) {
+  for (size_t i = headIndex; i >=0; i--) {
+    if (buffer[i]<lowCutoffValue){
+      return bufferTimestamp[i];
+    }
+  }
+  return 0;
+}
+template<typename T,size_t S>
+int64_t MathBuffer<T, S>::lastTimeAbove(T highCutoffValue) {
+  for (size_t i = headIndex; i >=0; i--) {
+    if (buffer[i]>highCutoffValue){
+      return bufferTimestamp[i];
+    }
+  }
+  return 0;
 }
 

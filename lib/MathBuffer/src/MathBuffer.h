@@ -21,6 +21,9 @@ public:
 	T firstValueOlderThan(int64_t cutoffMs);
 	T getHeadValue();
 	int64_t getHeadTimestamp();
+	int64_t withinRangeSince(T lowCutoffValue, T highCutoffValue);
+	int64_t lastTimeBelow(T lowCutoffValue);
+	int64_t lastTimeAbove(T highCutoffValue);
 
 private:
 	T buffer[S];

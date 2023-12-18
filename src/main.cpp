@@ -8,7 +8,7 @@
 WiFiClient espClient;
 
 void setup() {
-  pinMode(GRINDER_ACTIVE_PIN, INPUT);
+  pinMode(GRINDER_START_PIN, INPUT);
   pinMode(GRINDER_SENSE_PIN, INPUT);
   pinMode(GRINDER_MODE_BUTTON_PIN, INPUT);
   setupDisplay();

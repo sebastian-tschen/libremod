@@ -28,7 +28,7 @@ void allignRightPrintToScreen(char const *str, u8g2_uint_t y)
   u8g2.print(str);
 }
 
-void displayTopBottomProgress(char const *top, char const *bottom, double progress, int progressType)
+void displayTopBottomProgress(char const *top, char const *bottom, double progress, int progressType, const uint8_t *topFont, const uint8_t *bottomFont)
 {
 
   u8g2.clearBuffer();
@@ -55,11 +55,15 @@ void displayTopBottomProgress(char const *top, char const *bottom, double progre
 
   u8g2.setDrawColor(2);
   u8g2.setFontMode(1);
-  u8g2.setFont(u8g2_font_luRS19_tf);
+  u8g2.setFont(topFont);
   allignRightPrintToScreen(top, 27);
+  u8g2.setFont(bottomFont);
   allignRightPrintToScreen(bottom, 58);
 
   u8g2.sendBuffer();
+}
+void displayTopBottomProgress(char const *top, char const *bottom, double progress, int progressType){
+  displayTopBottomProgress(top, bottom,progress, progressType, u8g2_font_luRS19_tf, u8g2_font_luRS19_tf);
 }
 
 void updateDisplay()
@@ -118,6 +122,20 @@ void updateDisplay()
     }
 
   }
+  else if (scaleStatus == STATUS_SCALE_CUP_DETECTED)
+  {
+    double progess = (double)(millis()-stableSince)/(double)2000;
+    if (currentGrinderMode == GRINDER_MODE_TIMER){
+      snprintf(buf, sizeof(buf), "%3.1fs", totalTimerTime);
+      displayTopBottomProgress(buf, "☕️", progess, TOP_PROGRESS, u8g2_font_luRS19_tf, u8g2_font_unifont_t_symbols);
+    }
+    else if (currentGrinderMode == GRINDER_MODE_SCALE)
+    {
+      snprintf(buf2, sizeof(buf2), "%3.1fg", coffeeDoseWeight);
+      displayTopBottomProgress("☕️", buf2, progess, BOTTOM_PROGRESS, u8g2_font_unifont_t_symbols, u8g2_font_luRS19_tf);
+    }
+
+  }
   else if (scaleStatus == STATUS_SCALE_GRINDING_FINISHED)
   {
 
@@ -153,6 +171,19 @@ void updateDisplay()
     u8g2.setFont(u8g2_font_7x14B_tf);
     centerPrintToScreen("Grinding failed", 0);
 
+    if (errorCode == WEIGHT_TOO_LOW){
+      centerPrintToScreen("weight too low", 16);
+    }
+    else if (errorCode == NO_WEIGHT_CHANGE){
+      centerPrintToScreen("no weight change", 16);
+    }
+    else if (errorCode == GRINDING_TOOK_TOO_LONG){
+      centerPrintToScreen("grinding took too long", 16);
+    }
+    else if (errorCode == SCALE_NOT_READY){
+      centerPrintToScreen("scale not ready", 16);
+    }
+
     u8g2.setFont(u8g2_font_7x13_tr);
     centerPrintToScreen("Press the balance", 32);
     centerPrintToScreen("to reset", 42);
@@ -166,6 +197,7 @@ void setupDisplay()
   Serial.println("init_display");
 
   u8g2.begin();
+  u8g2.enableUTF8Print();
   u8g2.clearBuffer(); // clear the internal memory
   u8g2.setFont(u8g2_font_unifont_t_symbols);
   u8g2.drawXBM(0,0,coffeeOctopus_width,coffeeOctopus_height,coffeeOctopus_bits);
